@@ -36,7 +36,15 @@ class proxys(metaclass=singleton_type):
                 pass
 
     def _init_tunnel_proxy(self):
-        """从 config.ini 读取隧道代理配置"""
+        """读取隧道代理配置，优先级: 环境变量 > config.ini"""
+        # 1. 优先从环境变量读取 (Docker 部署用)
+        proxy_url = os.environ.get('PROXY_URL', '').strip()
+        if proxy_url:
+            self.tunnel_proxy = proxy_url
+            print(f"隧道代理已启用(环境变量): {proxy_url.split('@')[-1] if '@' in proxy_url else proxy_url}")
+            return
+
+        # 2. 从 config.ini 读取
         try:
             config = configparser.ConfigParser()
             config.read(config_filename, encoding='utf-8')

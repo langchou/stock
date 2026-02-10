@@ -44,7 +44,10 @@ def stock_selection() -> pd.DataFrame:
         return pd.DataFrame()
 
     data_count = data_json["result"]["count"]
-    page_count = math.ceil(data_count/page_size)
+    total_pages = math.ceil(data_count/page_size)
+    print(f"[选股数据] 共 {data_count} 只股票, {total_pages} 页")
+    print(f"[选股数据] 第 1/{total_pages} 页完成, 已获取 {len(data)} 条")
+    page_count = total_pages
     while page_count > 1:
         # 添加随机延迟，避免爬取过快
         time.sleep(random.uniform(1, 1.5))
@@ -54,7 +57,8 @@ def stock_selection() -> pd.DataFrame:
         data_json = r.json()
         _data = data_json["result"]["data"]
         data.extend(_data)
-        page_count =page_count - 1
+        page_count = page_count - 1
+        print(f"[选股数据] 第 {page_current}/{total_pages} 页完成, 已获取 {len(data)} 条")
 
     temp_df = pd.DataFrame(data)
 
