@@ -5,6 +5,7 @@
 import json
 from abc import ABC
 from tornado import gen
+import tornado.web
 # import logging
 import datetime
 import instock.lib.trade_time as trd
@@ -28,6 +29,7 @@ class MyEncoder(json.JSONEncoder):
 
 # 获得页面数据。
 class GetStockHtmlHandler(webBase.BaseHandler, ABC):
+    @tornado.web.authenticated
     @gen.coroutine
     def get(self):
         name = self.get_argument("table_name", default=None, strip=False)
@@ -43,6 +45,7 @@ class GetStockHtmlHandler(webBase.BaseHandler, ABC):
 
 # 获得股票数据内容。
 class GetStockDataHandler(webBase.BaseHandler, ABC):
+    @tornado.web.authenticated
     def get(self):
         name = self.get_argument("name", default=None, strip=False)
         date = self.get_argument("date", default=None, strip=False)

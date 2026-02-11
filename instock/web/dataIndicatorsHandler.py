@@ -3,6 +3,7 @@
 
 from abc import ABC
 from tornado import gen
+import tornado.web
 import logging
 import instock.core.stockfetch as stf
 import instock.core.kline.visualization as vis
@@ -14,6 +15,7 @@ __date__ = '2023/3/10 '
 
 # 获得页面数据。
 class GetDataIndicatorsHandler(webBase.BaseHandler, ABC):
+    @tornado.web.authenticated
     @gen.coroutine
     def get(self):
         code = self.get_argument("code", default=None, strip=False)
@@ -42,6 +44,7 @@ class GetDataIndicatorsHandler(webBase.BaseHandler, ABC):
 
 # 关注股票。
 class SaveCollectHandler(webBase.BaseHandler, ABC):
+    @tornado.web.authenticated
     @gen.coroutine
     def get(self):
         import datetime

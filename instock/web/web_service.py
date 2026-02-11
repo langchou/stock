@@ -10,6 +10,7 @@ import tornado.escape
 import tornado.httpserver
 import tornado.ioloop
 import tornado.options
+import tornado.web
 from tornado import gen
 
 # 在项目运行时，临时将项目路径添加到环境变量
@@ -35,6 +36,9 @@ __date__ = '2023/3/10 '
 class Application(tornado.web.Application):
     def __init__(self):
         handlers = [
+            # 登录/登出
+            (r"/login", LoginHandler),
+            (r"/logout", LogoutHandler),
             # 设置路由
             (r"/", HomeHandler),
             (r"/instock/", HomeHandler),
@@ -52,6 +56,7 @@ class Application(tornado.web.Application):
             xsrf_cookies=False,  # True,
             # cookie加密
             cookie_secret="027bb1b670eddf0392cdda8709268a17b58b7",
+            login_url="/login",
             debug=True,
         )
         super(Application, self).__init__(handlers, **settings)
@@ -59,8 +64,35 @@ class Application(tornado.web.Application):
         self.db = torndb.Connection(**mdb.MYSQL_CONN_TORNDB)
 
 
+# 登录handler。
+class LoginHandler(webBase.BaseHandler, ABC):
+    def get(self):
+        if self.current_user:
+            self.redirect(self.get_argument("next", "/"))
+            return
+        self.render("login.html", error=None)
+
+    def post(self):
+        username = self.get_argument("username", "")
+        password = self.get_argument("password", "")
+        if (username == webBase.INSTOCK_USERNAME and
+                webBase.hash_password(password) == webBase.hash_password(webBase.INSTOCK_PASSWORD)):
+            self.set_secure_cookie("user", username, expires_days=30)
+            self.redirect(self.get_argument("next", "/"))
+        else:
+            self.render("login.html", error="用户名或密码错误")
+
+
+# 登出handler。
+class LogoutHandler(webBase.BaseHandler, ABC):
+    def get(self):
+        self.clear_cookie("user")
+        self.redirect("/login")
+
+
 # 首页handler。
 class HomeHandler(webBase.BaseHandler, ABC):
+    @tornado.web.authenticated
     @gen.coroutine
     def get(self):
         self.render("index.html",
