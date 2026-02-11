@@ -6,7 +6,7 @@ import json
 from abc import ABC
 from tornado import gen
 import tornado.web
-# import logging
+import logging
 import datetime
 import instock.lib.trade_time as trd
 import instock.core.singleton_stock_web_module_data as sswmd
@@ -49,24 +49,28 @@ class GetStockDataHandler(webBase.BaseHandler, ABC):
     def get(self):
         name = self.get_argument("name", default=None, strip=False)
         date = self.get_argument("date", default=None, strip=False)
-        web_module_data = sswmd.stock_web_module_data().get_data(name)
         self.set_header('Content-Type', 'application/json;charset=UTF-8')
+        try:
+            web_module_data = sswmd.stock_web_module_data().get_data(name)
 
-        if date is None:
-            where = ""
-        else:
-            # where = f" WHERE `date` = '{date}'"
-            where = f" WHERE `date` = %s"
+            if date is None:
+                where = ""
+            else:
+                where = f" WHERE `date` = %s"
 
-        order_by = ""
-        if web_module_data.order_by is not None:
-            order_by = f" ORDER BY {web_module_data.order_by}"
+            order_by = ""
+            if web_module_data.order_by is not None:
+                order_by = f" ORDER BY {web_module_data.order_by}"
 
-        order_columns = ""
-        if web_module_data.order_columns is not None:
-            order_columns = f",{web_module_data.order_columns}"
+            order_columns = ""
+            if web_module_data.order_columns is not None:
+                order_columns = f",{web_module_data.order_columns}"
 
-        sql = f" SELECT *{order_columns} FROM `{web_module_data.table_name}`{where}{order_by}"
-        data = self.db.query(sql,date)
+            sql = f" SELECT *{order_columns} FROM `{web_module_data.table_name}`{where}{order_by}"
+            data = self.db.query(sql, date)
 
-        self.write(json.dumps(data, cls=MyEncoder))
+            self.write(json.dumps(data, cls=MyEncoder))
+        except Exception as e:
+            logging.error(f"GetStockDataHandler处理异常：{name} {date} {e}")
+            self.set_status(500)
+            self.write(json.dumps({"error": str(e)}))

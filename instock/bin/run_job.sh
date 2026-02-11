@@ -2,6 +2,19 @@
 
 #export PYTHONPATH=/data/InStock
 
+# 等待数据库就绪（最多等待60秒）
+echo "等待数据库就绪..."
+i=0
+while [ $i -lt 30 ]; do
+    if /usr/local/bin/python3 -c "import pymysql; pymysql.connect(host='${db_host:-localhost}', user='${db_user:-root}', password='${db_password:-root}', port=int('${db_port:-3306}'), connect_timeout=2)" 2>/dev/null; then
+        echo "数据库已就绪"
+        break
+    fi
+    echo "数据库未就绪，等待中... ($i/30)"
+    sleep 2
+    i=$((i + 1))
+done
+
 #nohup  &
 /usr/local/bin/python3 /data/InStock/instock/job/execute_daily_job.py
 

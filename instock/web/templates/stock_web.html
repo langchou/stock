@@ -115,7 +115,12 @@
         dateParam = dateVal;
 
         fetch('/instock/api_data?name=' + nameParam + '&date=' + dateParam)
-            .then(function(resp) { return resp.json(); })
+            .then(function(resp) {
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                var ct = resp.headers.get('content-type') || '';
+                if (ct.indexOf('json') === -1) throw new Error('非JSON响应');
+                return resp.json();
+            })
             .then(function(data) {
                 if (gridApi) {
                     gridApi.setGridOption('rowData', data);
