@@ -8,7 +8,6 @@ https://finance.sina.com.cn/realstock/company/klc_td_sh.txt
 """
 import datetime
 import pandas as pd
-import requests
 from py_mini_racer import MiniRacer
 from instock.core.singleton_proxy import proxys
 
@@ -311,7 +310,7 @@ def tool_trade_date_hist_sina() -> pd.DataFrame:
     :rtype: pandas.DataFrame
     """
     url = "https://finance.sina.com.cn/realstock/company/klc_td_sh.txt"
-    r = requests.get(url, proxies = proxys().get_proxies(), verify=False)
+    r = proxys().request_get(url)
     js_code = MiniRacer()
     js_code.eval(hk_js_decode)
     dict_list = js_code.call(

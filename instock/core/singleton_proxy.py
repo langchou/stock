@@ -4,8 +4,16 @@
 import os.path
 import sys
 import random
+import logging
+import time
 import configparser
+import requests
+import urllib3
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from instock.lib.singleton_type import singleton_type
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # 在项目运行时，临时将项目路径添加到环境变量
 cpath_current = os.path.dirname(os.path.dirname(__file__))
@@ -84,3 +92,51 @@ class proxys(metaclass=singleton_type):
 
         proxy = random.choice(self.data)
         return {"http": proxy, "https": proxy}
+
+    def _get_session(self):
+        """获取带重试策略的 requests Session"""
+        if not hasattr(self, '_session'):
+            session = requests.Session()
+            retry_strategy = Retry(
+                total=3,
+                backoff_factor=0.5,
+                status_forcelist=[403, 429, 500, 502, 503, 504],
+                allowed_methods=["HEAD", "GET", "POST", "OPTIONS"]
+            )
+            adapter = HTTPAdapter(max_retries=retry_strategy, pool_connections=20, pool_maxsize=20)
+            session.mount("http://", adapter)
+            session.mount("https://", adapter)
+            self._session = session
+        return self._session
+
+    def request_get(self, url, headers=None, params=None, retry=3, timeout=15):
+        """带重试的 GET 请求"""
+        session = self._get_session()
+        for i in range(retry):
+            try:
+                resp = session.get(url, proxies=self.get_proxies(), headers=headers,
+                                   params=params, timeout=timeout, verify=False)
+                resp.raise_for_status()
+                return resp
+            except requests.exceptions.RequestException as e:
+                logging.warning(f"GET请求失败({i+1}/{retry}): {url} - {e}")
+                if i < retry - 1:
+                    time.sleep(random.uniform(2, 5))
+                else:
+                    raise
+
+    def request_post(self, url, headers=None, json=None, data=None, retry=3, timeout=15):
+        """带重试的 POST 请求"""
+        session = self._get_session()
+        for i in range(retry):
+            try:
+                resp = session.post(url, proxies=self.get_proxies(), headers=headers,
+                                    json=json, data=data, timeout=timeout, verify=False)
+                resp.raise_for_status()
+                return resp
+            except requests.exceptions.RequestException as e:
+                logging.warning(f"POST请求失败({i+1}/{retry}): {url} - {e}")
+                if i < retry - 1:
+                    time.sleep(random.uniform(2, 5))
+                else:
+                    raise
