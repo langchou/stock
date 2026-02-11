@@ -3,12 +3,15 @@
 
 import os
 import requests
+import urllib3
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from pathlib import Path
 import time
 import random
 from instock.core.singleton_proxy import proxys
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 __author__ = 'myh '
 __date__ = '2025/12/31 '
@@ -75,7 +78,7 @@ class eastmoney_fetcher:
             'Referer': 'https://quote.eastmoney.com/',
             'Accept': '*/*',
             'Accept-Language': 'zh-CN,zh;q=0.9',
-            'Accept-Encoding': 'gzip, deflate, br, zstd',
+            'Accept-Encoding': 'gzip, deflate',
             'Connection': 'keep-alive',
         }
         session.headers.update(headers)
@@ -98,7 +101,8 @@ class eastmoney_fetcher:
                     url,
                     proxies=self.proxies,
                     params=params,
-                    timeout=timeout
+                    timeout=timeout,
+                    verify=False
                 )
                 response.raise_for_status()  # 检查HTTP错误
                 return response
@@ -129,7 +133,8 @@ class eastmoney_fetcher:
                     params=params,
                     data=data,
                     json=json,
-                    timeout=timeout
+                    timeout=timeout,
+                    verify=False
                 )
                 response.raise_for_status()  # 检查HTTP错误
                 return response

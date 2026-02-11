@@ -12,14 +12,14 @@ services:
       - instock_network
 
   instock:
-    image: mayanghua/instock:latest
+    image: ghcr.io/langchou/stock:latest
     container_name: InStock
     ports:
       - "9988:9988"
+    env_file:
+      - .env
     environment:
       db_host: InStockDbService
-    volumes:
-      - /data/instockproxy.txt:/data/InStock/instock/config/proxy.txt
     depends_on:
       - instockdbservice
     networks:

@@ -5,6 +5,7 @@
 import json
 from abc import ABC
 from tornado import gen
+import tornado.web
 # import logging
 import datetime
 import instock.lib.trade_time as trd
@@ -21,15 +22,14 @@ class MyEncoder(json.JSONEncoder):
         if isinstance(obj, bytes):
             return "是" if ord(obj) == 1 else "否"
         elif isinstance(obj, datetime.date):
-            delta = datetime.datetime.combine(obj, datetime.time.min) - datetime.datetime(1899, 12, 30)
-            return f'/OADate({float(delta.days) + (float(delta.seconds) / 86400)})/'  # 86,400 seconds in day
-            # return obj.isoformat()
+            return obj.strftime("%Y-%m-%d")
         else:
             return json.JSONEncoder.default(self, obj)
 
 
 # 获得页面数据。
 class GetStockHtmlHandler(webBase.BaseHandler, ABC):
+    @tornado.web.authenticated
     @gen.coroutine
     def get(self):
         name = self.get_argument("table_name", default=None, strip=False)
@@ -45,6 +45,7 @@ class GetStockHtmlHandler(webBase.BaseHandler, ABC):
 
 # 获得股票数据内容。
 class GetStockDataHandler(webBase.BaseHandler, ABC):
+    @tornado.web.authenticated
     def get(self):
         name = self.get_argument("name", default=None, strip=False)
         date = self.get_argument("date", default=None, strip=False)
