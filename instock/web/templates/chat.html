@@ -1,0 +1,941 @@
+{% extends "layout/default.html" %}
+
+{% block main_content %}
+<style>
+/* ===== Base layout ===== */
+.chat-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+    background: #f5f7fa;
+}
+
+/* ===== Top bar ===== */
+.chat-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 48px;
+    min-height: 48px;
+    padding: 0 16px;
+    background: #fff;
+    border-bottom: 1px solid #e5e8ec;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    z-index: 10;
+}
+.chat-topbar-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.chat-topbar-title i {
+    color: #307ecc;
+    font-size: 18px;
+}
+.btn-new-chat {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 13px;
+    color: #307ecc;
+    background: #eaf2fb;
+    border: 1px solid #c4daf0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    white-space: nowrap;
+}
+.btn-new-chat:hover {
+    background: #d6e8f8;
+    border-color: #a8c8e8;
+}
+.btn-new-chat:active {
+    background: #c4daf0;
+}
+
+/* ===== Config warning ===== */
+.chat-config-notice {
+    margin: 12px 16px 0;
+    padding: 12px 16px;
+    background: #fff3cd;
+    border: 1px solid #ffc107;
+    border-radius: 8px;
+    color: #856404;
+    font-size: 13px;
+    line-height: 1.6;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+.chat-config-notice i {
+    font-size: 18px;
+    margin-top: 1px;
+    flex-shrink: 0;
+}
+
+/* ===== Messages container ===== */
+.chat-messages {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 16px;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+}
+
+/* ===== Welcome message ===== */
+.chat-welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    min-height: 200px;
+    padding: 32px 20px;
+    text-align: center;
+}
+.chat-welcome-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #307ecc, #5ba3e6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(48, 126, 204, 0.3);
+}
+.chat-welcome-icon i {
+    font-size: 28px;
+    color: #fff;
+}
+.chat-welcome h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 12px;
+}
+.chat-welcome p {
+    font-size: 14px;
+    color: #666;
+    margin: 0 0 20px;
+    line-height: 1.6;
+    max-width: 420px;
+}
+.chat-welcome-suggestions {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    max-width: 420px;
+}
+.chat-welcome-suggestions li {
+    background: #fff;
+    border: 1px solid #e5e8ec;
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 8px;
+    font-size: 13px;
+    color: #444;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    line-height: 1.5;
+}
+.chat-welcome-suggestions li:hover {
+    background: #f0f6fd;
+    border-color: #c4daf0;
+    box-shadow: 0 2px 6px rgba(48, 126, 204, 0.08);
+}
+.chat-welcome-suggestions li i {
+    color: #307ecc;
+    margin-right: 8px;
+}
+
+/* ===== Message bubbles ===== */
+.chat-msg {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 16px;
+    gap: 10px;
+    max-width: 100%;
+    animation: msgFadeIn 0.25s ease-out;
+}
+@keyframes msgFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+.chat-msg-user {
+    flex-direction: row-reverse;
+}
+.chat-msg-avatar {
+    width: 34px;
+    height: 34px;
+    min-width: 34px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+.chat-msg-user .chat-msg-avatar {
+    background: #307ecc;
+    color: #fff;
+}
+.chat-msg-ai .chat-msg-avatar {
+    background: linear-gradient(135deg, #307ecc, #5ba3e6);
+    color: #fff;
+}
+.chat-msg-bubble {
+    padding: 10px 14px;
+    border-radius: 12px;
+    font-size: 14px;
+    line-height: 1.7;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    max-width: calc(100% - 54px);
+    position: relative;
+}
+.chat-msg-user .chat-msg-bubble {
+    background: #307ecc;
+    color: #fff;
+    border-bottom-right-radius: 4px;
+}
+.chat-msg-ai .chat-msg-bubble {
+    background: #fff;
+    color: #333;
+    border: 1px solid #e5e8ec;
+    border-bottom-left-radius: 4px;
+}
+.chat-msg-error .chat-msg-bubble {
+    background: #fff5f5;
+    color: #c0392b;
+    border-color: #f5c6cb;
+}
+
+/* ===== Markdown rendering inside AI bubbles ===== */
+.chat-msg-ai .chat-msg-bubble p {
+    margin: 0 0 8px;
+}
+.chat-msg-ai .chat-msg-bubble p:last-child {
+    margin-bottom: 0;
+}
+.chat-msg-ai .chat-msg-bubble pre {
+    background: #1e1e2e;
+    color: #cdd6f4;
+    padding: 12px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 8px 0;
+    font-size: 13px;
+    line-height: 1.5;
+    -webkit-overflow-scrolling: touch;
+}
+.chat-msg-ai .chat-msg-bubble pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+    border-radius: 0;
+}
+.chat-msg-ai .chat-msg-bubble code {
+    background: #f0f3f7;
+    color: #c0392b;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: Consolas, Monaco, "Courier New", monospace;
+}
+.chat-msg-ai .chat-msg-bubble ul,
+.chat-msg-ai .chat-msg-bubble ol {
+    margin: 6px 0;
+    padding-left: 22px;
+}
+.chat-msg-ai .chat-msg-bubble li {
+    margin-bottom: 4px;
+}
+.chat-msg-ai .chat-msg-bubble strong {
+    font-weight: 600;
+    color: #222;
+}
+.chat-msg-ai .chat-msg-bubble a {
+    color: #307ecc;
+    text-decoration: underline;
+}
+.chat-msg-ai .chat-msg-bubble blockquote {
+    border-left: 3px solid #307ecc;
+    margin: 8px 0;
+    padding: 4px 12px;
+    color: #555;
+    background: #f8f9fa;
+    border-radius: 0 6px 6px 0;
+}
+
+/* ===== Typing indicator ===== */
+.typing-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 0;
+}
+.typing-indicator span {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #aab4c2;
+    animation: typingBounce 1.2s infinite ease-in-out;
+}
+.typing-indicator span:nth-child(2) {
+    animation-delay: 0.15s;
+}
+.typing-indicator span:nth-child(3) {
+    animation-delay: 0.3s;
+}
+@keyframes typingBounce {
+    0%, 60%, 100% { transform: translateY(0); opacity: 0.5; }
+    30% { transform: translateY(-6px); opacity: 1; }
+}
+
+/* ===== Input area ===== */
+.chat-input-area {
+    padding: 12px 16px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    background: #fff;
+    border-top: 1px solid #e5e8ec;
+    box-shadow: 0 -1px 4px rgba(0,0,0,0.04);
+    z-index: 10;
+}
+.chat-input-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+    max-width: 800px;
+    margin: 0 auto;
+}
+.chat-textarea-wrap {
+    flex: 1;
+    position: relative;
+}
+#chatInput {
+    width: 100%;
+    min-height: 40px;
+    max-height: 120px;
+    padding: 9px 14px;
+    border: 1px solid #d4d9e0;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height: 1.5;
+    resize: none;
+    outline: none;
+    background: #f8f9fb;
+    color: #333;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+    transition: border-color 0.2s, background 0.2s;
+    box-sizing: border-box;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+#chatInput:focus {
+    border-color: #307ecc;
+    background: #fff;
+    box-shadow: 0 0 0 2px rgba(48, 126, 204, 0.12);
+}
+#chatInput::placeholder {
+    color: #aab4c2;
+}
+.btn-send {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 42px;
+    height: 40px;
+    min-width: 42px;
+    border: none;
+    border-radius: 10px;
+    background: #307ecc;
+    color: #fff;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    flex-shrink: 0;
+}
+.btn-send:hover {
+    background: #286bad;
+}
+.btn-send:active {
+    transform: scale(0.95);
+}
+.btn-send:disabled {
+    background: #b0c8e4;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* ===== Scrollbar ===== */
+.chat-messages::-webkit-scrollbar {
+    width: 5px;
+}
+.chat-messages::-webkit-scrollbar-track {
+    background: transparent;
+}
+.chat-messages::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 3px;
+}
+.chat-messages::-webkit-scrollbar-thumb:hover {
+    background: #aaa;
+}
+
+/* ===== Desktop centering for messages ===== */
+@media (min-width: 769px) {
+    .chat-messages-inner {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .chat-welcome {
+        padding: 48px 20px;
+    }
+}
+
+/* ===== Mobile responsive ===== */
+@media (max-width: 768px) {
+    .chat-topbar {
+        height: 44px;
+        min-height: 44px;
+        padding: 0 12px;
+    }
+    .chat-topbar-title {
+        font-size: 15px;
+    }
+    .chat-topbar-title i {
+        font-size: 16px;
+    }
+    .btn-new-chat {
+        padding: 5px 10px;
+        font-size: 12px;
+    }
+    .chat-messages {
+        padding: 12px;
+    }
+    .chat-msg {
+        gap: 8px;
+        margin-bottom: 12px;
+    }
+    .chat-msg-avatar {
+        width: 30px;
+        height: 30px;
+        min-width: 30px;
+        font-size: 12px;
+    }
+    .chat-msg-bubble {
+        padding: 9px 12px;
+        font-size: 14px;
+        max-width: calc(100% - 46px);
+    }
+    .chat-input-area {
+        padding: 10px 12px;
+        padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    }
+    .chat-input-row {
+        gap: 8px;
+    }
+    #chatInput {
+        font-size: 16px; /* Prevent iOS zoom on focus */
+        padding: 8px 12px;
+        min-height: 40px;
+    }
+    .btn-send {
+        width: 44px;
+        height: 44px;
+        min-width: 44px;
+        font-size: 18px;
+    }
+    .chat-welcome-icon {
+        width: 52px;
+        height: 52px;
+    }
+    .chat-welcome-icon i {
+        font-size: 22px;
+    }
+    .chat-welcome h3 {
+        font-size: 16px;
+    }
+    .chat-welcome p {
+        font-size: 13px;
+    }
+    .chat-welcome-suggestions li {
+        padding: 10px 14px;
+        font-size: 13px;
+    }
+    .chat-config-notice {
+        margin: 10px 12px 0;
+        padding: 10px 12px;
+        font-size: 12px;
+    }
+    .chat-msg-ai .chat-msg-bubble pre {
+        font-size: 12px;
+        padding: 10px 12px;
+    }
+}
+
+/* ===== Very small screens ===== */
+@media (max-width: 374px) {
+    .chat-msg-bubble {
+        font-size: 13px;
+    }
+    .chat-welcome-suggestions li {
+        font-size: 12px;
+        padding: 9px 12px;
+    }
+}
+</style>
+
+<div class="chat-page">
+    <!-- Top bar -->
+    <div class="chat-topbar">
+        <div class="chat-topbar-title">
+            <i class="fa fa-comments"></i>
+            <span>AI 助手</span>
+        </div>
+        <button class="btn-new-chat" id="btnNewChat" title="开始新对话">
+            <i class="fa fa-plus"></i>
+            <span>新对话</span>
+        </button>
+    </div>
+
+    <!-- AI config warning -->
+    {% if not ai_configured %}
+    <div class="chat-config-notice" id="configNotice">
+        <i class="fa fa-exclamation-triangle"></i>
+        <div>
+            <strong>AI 功能未配置</strong><br>
+            请先配置 AI 环境变量（AI_BASE_URL, AI_API_KEY, AI_MODEL），才能使用 AI 助手功能。
+        </div>
+    </div>
+    {% end %}
+
+    <!-- Messages area -->
+    <div class="chat-messages" id="chatMessages">
+        <div class="chat-messages-inner" id="chatMessagesInner">
+            <!-- Welcome screen (shown when no messages) -->
+            <div class="chat-welcome" id="chatWelcome">
+                <div class="chat-welcome-icon">
+                    <i class="fa fa-comments"></i>
+                </div>
+                <h3>InStock AI 助手</h3>
+                <p>你好！我是 InStock AI 助手，可以帮你查询和分析股票数据。试试问我：</p>
+                <ul class="chat-welcome-suggestions" id="chatSuggestions">
+                    <li data-question="今天涨幅最大的股票有哪些？">
+                        <i class="fa fa-line-chart"></i>今天涨幅最大的股票有哪些？
+                    </li>
+                    <li data-question="哪些行业资金净流入最多？">
+                        <i class="fa fa-bar-chart"></i>哪些行业资金净流入最多？
+                    </li>
+                    <li data-question="最近有哪些股票出现了MACD金叉？">
+                        <i class="fa fa-bolt"></i>最近有哪些股票出现了MACD金叉？
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Input area -->
+    <div class="chat-input-area">
+        <div class="chat-input-row">
+            <div class="chat-textarea-wrap">
+                <textarea id="chatInput"
+                          placeholder="输入你的问题..."
+                          rows="1"
+                          {% if not ai_configured %}disabled{% end %}
+                ></textarea>
+            </div>
+            <button class="btn-send" id="btnSend" title="发送" {% if not ai_configured %}disabled{% end %}>
+                <i class="fa fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+(function() {
+    'use strict';
+
+    // ===== State =====
+    var messages = [];
+    var isStreaming = false;
+    var currentAiEl = null;
+    var currentAiContent = '';
+    var abortController = null;
+
+    // ===== DOM references =====
+    var chatMessages = document.getElementById('chatMessages');
+    var chatMessagesInner = document.getElementById('chatMessagesInner');
+    var chatWelcome = document.getElementById('chatWelcome');
+    var chatInput = document.getElementById('chatInput');
+    var btnSend = document.getElementById('btnSend');
+    var btnNewChat = document.getElementById('btnNewChat');
+
+    // ===== Markdown renderer =====
+    function renderMarkdown(text) {
+        if (!text) return '';
+
+        var html = text;
+
+        // Escape HTML entities first
+        html = html.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+        // Code blocks: ```lang\n...\n```
+        html = html.replace(/```(\w*)\n([\s\S]*?)```/g, function(match, lang, code) {
+            return '<pre><code class="lang-' + (lang || 'text') + '">' + code.trim() + '</code></pre>';
+        });
+        // Code blocks without newline after backticks
+        html = html.replace(/```([\s\S]*?)```/g, function(match, code) {
+            return '<pre><code>' + code.trim() + '</code></pre>';
+        });
+
+        // Inline code: `...`
+        html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+        // Bold: **...**
+        html = html.replace(/\*\*([^\*]+)\*\*/g, '<strong>$1</strong>');
+
+        // Italic: *...*
+        html = html.replace(/\*([^\*]+)\*/g, '<em>$1</em>');
+
+        // Headings: ### ... (process before lists)
+        html = html.replace(/^### (.+)$/gm, '<strong style="font-size:15px;">$1</strong>');
+        html = html.replace(/^## (.+)$/gm, '<strong style="font-size:16px;">$1</strong>');
+        html = html.replace(/^# (.+)$/gm, '<strong style="font-size:17px;">$1</strong>');
+
+        // Blockquotes: > ...
+        html = html.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+
+        // Unordered lists: - item or * item
+        // Process consecutive list lines into a single <ul>
+        html = html.replace(/(^[\-\*] .+\n?)+/gm, function(block) {
+            var items = block.trim().split('\n');
+            var listHtml = '<ul>';
+            for (var i = 0; i < items.length; i++) {
+                listHtml += '<li>' + items[i].replace(/^[\-\*] /, '') + '</li>';
+            }
+            listHtml += '</ul>';
+            return listHtml;
+        });
+
+        // Ordered lists: 1. item
+        html = html.replace(/(^\d+\. .+\n?)+/gm, function(block) {
+            var items = block.trim().split('\n');
+            var listHtml = '<ol>';
+            for (var i = 0; i < items.length; i++) {
+                listHtml += '<li>' + items[i].replace(/^\d+\. /, '') + '</li>';
+            }
+            listHtml += '</ol>';
+            return listHtml;
+        });
+
+        // Line breaks (but not inside pre/code blocks)
+        // Split by pre blocks, only apply <br> outside them
+        var parts = html.split(/(<pre[\s\S]*?<\/pre>)/g);
+        for (var i = 0; i < parts.length; i++) {
+            if (parts[i].indexOf('<pre') !== 0) {
+                parts[i] = parts[i].replace(/\n/g, '<br>');
+            }
+        }
+        html = parts.join('');
+
+        return html;
+    }
+
+    // ===== Scroll to bottom =====
+    function scrollToBottom(force) {
+        var threshold = 100;
+        var atBottom = (chatMessages.scrollHeight - chatMessages.scrollTop - chatMessages.clientHeight) < threshold;
+        if (force || atBottom) {
+            requestAnimationFrame(function() {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            });
+        }
+    }
+
+    // ===== Show / hide welcome =====
+    function updateWelcomeVisibility() {
+        if (messages.length === 0) {
+            chatWelcome.style.display = 'flex';
+        } else {
+            chatWelcome.style.display = 'none';
+        }
+    }
+
+    // ===== Create message DOM =====
+    function appendUserMessage(text) {
+        var wrapper = document.createElement('div');
+        wrapper.className = 'chat-msg chat-msg-user';
+        wrapper.innerHTML =
+            '<div class="chat-msg-avatar"><i class="fa fa-user"></i></div>' +
+            '<div class="chat-msg-bubble"></div>';
+        wrapper.querySelector('.chat-msg-bubble').textContent = text;
+        chatMessagesInner.appendChild(wrapper);
+        scrollToBottom(true);
+    }
+
+    function createAiMessage() {
+        var wrapper = document.createElement('div');
+        wrapper.className = 'chat-msg chat-msg-ai';
+        wrapper.innerHTML =
+            '<div class="chat-msg-avatar"><i class="fa fa-robot"></i></div>' +
+            '<div class="chat-msg-bubble"><div class="typing-indicator"><span></span><span></span><span></span></div></div>';
+        chatMessagesInner.appendChild(wrapper);
+        scrollToBottom(true);
+        return wrapper.querySelector('.chat-msg-bubble');
+    }
+
+    function appendErrorMessage(text) {
+        var wrapper = document.createElement('div');
+        wrapper.className = 'chat-msg chat-msg-ai chat-msg-error';
+        wrapper.innerHTML =
+            '<div class="chat-msg-avatar"><i class="fa fa-exclamation-circle"></i></div>' +
+            '<div class="chat-msg-bubble"></div>';
+        wrapper.querySelector('.chat-msg-bubble').innerHTML =
+            '<i class="fa fa-warning"></i> ' + escapeHtml(text);
+        chatMessagesInner.appendChild(wrapper);
+        scrollToBottom(true);
+    }
+
+    function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ===== Update streaming state =====
+    function setStreaming(streaming) {
+        isStreaming = streaming;
+        btnSend.disabled = streaming;
+        chatInput.disabled = streaming;
+        if (!streaming) {
+            chatInput.disabled = false;
+            chatInput.focus();
+        }
+    }
+
+    // ===== Textarea auto-resize =====
+    function autoResize() {
+        chatInput.style.height = 'auto';
+        var newHeight = Math.min(chatInput.scrollHeight, 120);
+        chatInput.style.height = newHeight + 'px';
+    }
+
+    // ===== Send message =====
+    function sendMessage(question) {
+        if (!question || !question.trim()) return;
+        question = question.trim();
+
+        // Update welcome
+        updateWelcomeVisibility();
+
+        // Add user message
+        messages.push({ role: 'user', content: question });
+        appendUserMessage(question);
+        updateWelcomeVisibility();
+
+        // Clear input
+        chatInput.value = '';
+        autoResize();
+
+        // Create AI bubble with typing indicator
+        currentAiEl = createAiMessage();
+        currentAiContent = '';
+        setStreaming(true);
+
+        // Build request body
+        var body = JSON.stringify({
+            messages: messages,
+            question: question
+        });
+
+        // Abort controller for cancelling
+        abortController = new AbortController();
+
+        fetch('/instock/api_chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: body,
+            signal: abortController.signal
+        }).then(function(response) {
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+            }
+            var reader = response.body.getReader();
+            var decoder = new TextDecoder('utf-8');
+            var buffer = '';
+
+            function processChunk(result) {
+                if (result.done) {
+                    finishAiMessage();
+                    return;
+                }
+                buffer += decoder.decode(result.value, { stream: true });
+
+                // Process complete lines
+                var lines = buffer.split('\n');
+                buffer = lines.pop(); // Keep incomplete line in buffer
+
+                for (var i = 0; i < lines.length; i++) {
+                    var line = lines[i].trim();
+                    if (!line) continue;
+
+                    if (line === 'data: [DONE]') {
+                        finishAiMessage();
+                        return;
+                    }
+
+                    if (line.indexOf('data: ') === 0) {
+                        var jsonStr = line.substring(6);
+                        try {
+                            var data = JSON.parse(jsonStr);
+                            if (data.content) {
+                                currentAiContent += data.content;
+                                updateAiBubble();
+                            }
+                            if (data.error) {
+                                currentAiContent = '';
+                                currentAiEl.innerHTML = '<i class="fa fa-warning"></i> ' + escapeHtml(data.error);
+                                finishAiMessage(true);
+                                return;
+                            }
+                        } catch (e) {
+                            // Ignore parse errors for partial data
+                        }
+                    }
+                }
+
+                return reader.read().then(processChunk);
+            }
+
+            return reader.read().then(processChunk);
+        }).catch(function(err) {
+            if (err.name === 'AbortError') {
+                finishAiMessage(true);
+                return;
+            }
+            if (currentAiEl) {
+                currentAiEl.innerHTML = '<i class="fa fa-warning"></i> ' + escapeHtml('网络错误: ' + err.message);
+            } else {
+                appendErrorMessage('网络错误: ' + err.message);
+            }
+            finishAiMessage(true);
+        });
+    }
+
+    function updateAiBubble() {
+        if (!currentAiEl) return;
+        currentAiEl.innerHTML = renderMarkdown(currentAiContent);
+        scrollToBottom(false);
+    }
+
+    function finishAiMessage(isError) {
+        if (!isError && currentAiContent) {
+            messages.push({ role: 'assistant', content: currentAiContent });
+            updateAiBubble(); // Final render
+        }
+        currentAiEl = null;
+        currentAiContent = '';
+        abortController = null;
+        setStreaming(false);
+    }
+
+    // ===== New chat =====
+    function clearChat() {
+        messages = [];
+        // Remove all message elements but keep the welcome
+        var msgElements = chatMessagesInner.querySelectorAll('.chat-msg');
+        for (var i = 0; i < msgElements.length; i++) {
+            msgElements[i].remove();
+        }
+        if (isStreaming && abortController) {
+            abortController.abort();
+        }
+        isStreaming = false;
+        currentAiEl = null;
+        currentAiContent = '';
+        setStreaming(false);
+        updateWelcomeVisibility();
+        chatInput.focus();
+    }
+
+    // ===== Event listeners =====
+
+    // Send button
+    btnSend.addEventListener('click', function() {
+        if (isStreaming) return;
+        sendMessage(chatInput.value);
+    });
+
+    // Enter to send, Shift+Enter for newline
+    chatInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            if (!isStreaming) {
+                sendMessage(chatInput.value);
+            }
+        }
+    });
+
+    // Textarea auto-resize
+    chatInput.addEventListener('input', autoResize);
+
+    // New chat button
+    btnNewChat.addEventListener('click', clearChat);
+
+    // Suggestion clicks
+    var suggestions = document.querySelectorAll('#chatSuggestions li');
+    for (var i = 0; i < suggestions.length; i++) {
+        suggestions[i].addEventListener('click', function() {
+            var question = this.getAttribute('data-question');
+            if (question && !isStreaming) {
+                sendMessage(question);
+            }
+        });
+    }
+
+    // ===== Mobile: handle virtual keyboard resizing =====
+    var viewportHeight = window.innerHeight;
+    window.addEventListener('resize', function() {
+        // On mobile, when keyboard opens, the viewport shrinks
+        // We need to keep the input visible
+        var newHeight = window.innerHeight;
+        if (newHeight < viewportHeight) {
+            // Keyboard likely opened
+            setTimeout(function() {
+                scrollToBottom(true);
+            }, 100);
+        }
+        viewportHeight = newHeight;
+    });
+
+    // For iOS: ensure input doesn't get hidden behind keyboard
+    if (/iPhone|iPad|iPod/.test(navigator.userAgent)) {
+        chatInput.addEventListener('focus', function() {
+            setTimeout(function() {
+                scrollToBottom(true);
+                chatInput.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 300);
+        });
+    }
+
+    // ===== Initialize =====
+    updateWelcomeVisibility();
+    {% if ai_configured %}
+    chatInput.focus();
+    {% end %}
+
+})();
+</script>
+{% end %}

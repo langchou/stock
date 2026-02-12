@@ -28,6 +28,7 @@ import instock.lib.version as version
 import instock.web.dataTableHandler as dataTableHandler
 import instock.web.dataIndicatorsHandler as dataIndicatorsHandler
 import instock.web.base as webBase
+import instock.web.chatHandler as chatHandler
 
 __author__ = 'myh '
 __date__ = '2023/3/10 '
@@ -49,6 +50,9 @@ class Application(tornado.web.Application):
             (r"/instock/data/indicators", dataIndicatorsHandler.GetDataIndicatorsHandler),
             # 加入关注
             (r"/instock/control/attention", dataIndicatorsHandler.SaveCollectHandler),
+            # AI 助手
+            (r"/instock/chat", chatHandler.ChatPageHandler),
+            (r"/instock/api_chat", chatHandler.ChatApiHandler),
         ]
         settings = dict(  # 配置
             template_path=os.path.join(os.path.dirname(__file__), "templates"),
