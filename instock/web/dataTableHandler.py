@@ -21,7 +21,7 @@ class MyEncoder(json.JSONEncoder):
         if isinstance(obj, bytes):
             return "是" if ord(obj) == 1 else "否"
         elif isinstance(obj, datetime.date):
-            return obj.isoformat()
+            return obj.strftime("%Y-%m-%d")
         else:
             return json.JSONEncoder.default(self, obj)
 

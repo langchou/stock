@@ -1044,34 +1044,20 @@ def get_field_cn(key, table):
 
 def get_field_cns(cols):
     data = []
-    col_index = 0
     for k in cols:
-        width = cols[k]['size']
-        col_def = {
-            "field": k,
-            "headerName": cols[k]['cn'],
-            "width": width if width > 0 else 110,
-            "sortable": True,
-            "filter": True,
-            "resizable": True
-        }
-        # 固定前3列
-        if col_index < 3:
-            col_def["pinned"] = "left"
-        # size为0且不在前3列的隐藏
-        if width == 0 and col_index >= 3:
-            col_def["hide"] = True
-        # code列标记超链接
         if k == 'code':
-            col_def["_linkCol"] = True
-        # 涨跌幅条件格式：红涨绿跌
-        if k == 'change_rate':
-            col_def["cellClassRules"] = {
-                "cell-positive": "x > 0",
-                "cell-negative": "x < 0"
-            }
-        data.append(col_def)
-        col_index += 1
+            data.append({"value": k, "caption": cols[k]['cn'], "width": cols[k]['size'],
+                         "headerStyle": {"font": "bold 9pt Calibri", "wordWrap": "true"}, "style": ""})
+        elif k == 'change_rate':
+            data.append({"value": k, "caption": cols[k]['cn'], "width": cols[k]['size'],
+                         "headerStyle": {"font": "bold 9pt Calibri", "wordWrap": "true"}, "conditionalFormats": [
+                    {"ruleType": "formulaRule", "formula": "@>0", "style": {"foreColor": "red"}},
+                    {"ruleType": "formulaRule", "formula": "@<0", "style": {"foreColor": "green"}}]})
+        else:
+            data.append({"value": k, "caption": cols[k]['cn'], "width": cols[k]['size'],
+                         "headerStyle": {"font": "bold 9pt Calibri", "wordWrap": "true"}})
+        # data.append({"value": k, "caption": cols[k]['cn'], "width": cols[k]['size'], "headerStyle": {"font": "bold 9pt Calibri", "wordWrap": "true"}})
+        # data.append({"name": k, "displayName": cols[k]['cn'], "size": cols[k]['size']})
     return data
 
 

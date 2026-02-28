@@ -2,118 +2,138 @@
 
 {% block main_content %}
 <link rel="stylesheet" href="/static/css/bootstrap-datepicker3.min.css" />
-<link rel="stylesheet" href="/static/css/ag-grid.min.css" />
-<link rel="stylesheet" href="/static/css/ag-theme-alpine.min.css" />
-<script src="/static/js/ag-grid-community.min.js"></script>
-<script src="/static/js/xlsx.full.min.js"></script>
-<script src="/static/js/FileSaver.js" type="text/javascript"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/styles/ag-grid.min.css" />
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/styles/ag-theme-balham.min.css" />
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community@32.3.3/dist/ag-grid-community.min.noStyle.js"></script>
 <script src="/static/js/bootstrap-datepicker.min.js"></script>
 <script src="/static/js/bootstrap-datepicker.zh-CN.min.js"></script>
+<style>
+.ag-theme-balham .ag-header-cell-label .ag-header-cell-text {
+    white-space: normal !important;
+    line-height: 1.2;
+}
+.ag-theme-balham .ag-header-cell {
+    padding: 4px 6px;
+}
+.cell-red { color: red; }
+.cell-green { color: green; }
+.code-link { color: #1a73e8; cursor: pointer; text-decoration: underline; }
+.code-link:hover { color: #0d47a1; }
+#statusBar {
+    background: #f5f5f5;
+    border-top: 1px solid #ddd;
+    padding: 2px 10px;
+    font-size: 12px;
+    line-height: 20px;
+}
+</style>
+
 <div style="height: 100%;overflow: hidden;">
-        <div class="table-header" style="width:100%;height:35px;">
-            <div style="display:inline-block;float:left;height:100%;">
-                <div style="display:inline-block;float:left;text-overflow:ellipsis;white-space:nowrap;">
-                    {{ web_module_data.name }}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;日期：
-                </div>
-                <div style="display:inline-block;float:right;">
-                    <input type="hidden" id="dateid_old">
-                    <input type="text" value="{{ date_now }}" id="dateid" class="input-group-sm form-control date-picker">
-                </div>
+    <div class="table-header" style="width:100%;height:35px;">
+        <div style="display:inline-block;float:left;height:100%;">
+            <div style="display:inline-block;float:left;text-overflow:ellipsis;white-space:nowrap;">
+                {{ web_module_data.name }}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;日期：
             </div>
-            <div style="display:inline-block;float:right;height:100%;">
-                <input type="button" id="resetFilter" value="重置筛选" style="background-color:#307ECC;height:100%;">
-                <input type="button" id="saveExcel" value="保存Excel" style="background-color:#307ECC;height:100%;">
+            <div style="display:inline-block;float:right;">
+                <input type="hidden" id="dateid_old">
+                <input type="text" value="{{ date_now }}" id="dateid" class="input-group-sm form-control date-picker">
             </div>
         </div>
-        <div id="instock-data" class="ag-theme-alpine" style="width:100%;height:calc( 100% - 55px );"></div>
-        <div id="statusBar" style="width:100%;height:20px;font-size:12px;line-height:20px;padding-left:5px;background:#f5f5f5;border-top:1px solid #ddd;"></div>
+        <div style="display:inline-block;float:right;height:100%;">
+            <input type="button" id="resetFilter" value="重置筛选" style="background-color:#307ECC;height:100%;color:#fff;border:none;padding:0 12px;cursor:pointer;">
+            <input type="button" id="saveExcel" value="保存CSV" style="background-color:#307ECC;height:100%;color:#fff;border:none;padding:0 12px;cursor:pointer;">
+        </div>
+    </div>
+    <div id="instock-data" class="ag-theme-balham" style="width:100%;height:calc( 100% - 55px );"></div>
+    <div id="statusBar"><i class="fa fa-commenting-o"></i> 总记录/筛选记录：<b id="totalCount">0</b> / <b id="filteredCount">0</b> 条 - 当前位置：第 <b id="currentRow">0</b> 行</div>
 </div>
-
-<style>
-    .cell-positive { color: red; }
-    .cell-negative { color: green; }
-    .ag-theme-alpine .ag-header-cell-label .ag-header-cell-text {
-        font-weight: bold;
-        font-size: 9pt;
-        font-family: Calibri, sans-serif;
-        white-space: normal;
-        word-wrap: break-word;
-    }
-    .code-link { color: #337ab7; cursor: pointer; text-decoration: underline; }
-    .code-link:hover { color: #23527c; }
-</style>
 
 <script type="text/javascript">
     const nameParam = $.getUrlVar('table_name');
     let dateParam = "{{ date_now }}";
     const colInfos = {% raw web_module_data.column_names %};
     let gridApi = null;
-    let allRowData = [];
 
-    // AG Grid 中文本地化
-    const AG_GRID_LOCALE_ZH = {
-        page: '页', more: '更多', to: '到', of: '共',
-        next: '下一页', last: '最后', first: '首页', previous: '上一页',
-        loadingOoo: '加载中...', noRowsToShow: '无数据',
-        pinColumn: '固定列', autosizeThiscolumn: '自适应列宽',
-        autosizeAllColumns: '自适应所有列宽', resetColumns: '重置列',
-        copy: '复制', ctrlC: 'Ctrl+C', copyWithHeaders: '带表头复制',
-        paste: '粘贴', ctrlV: 'Ctrl+V',
-        filterOoo: '过滤...', equals: '等于', notEqual: '不等于',
-        lessThan: '小于', greaterThan: '大于',
-        lessThanOrEqual: '小于等于', greaterThanOrEqual: '大于等于',
-        inRange: '范围', contains: '包含', notContains: '不包含',
-        startsWith: '开始于', endsWith: '结束于',
-        blank: '空白', notBlank: '非空白',
-        andCondition: '且', orCondition: '或',
-        applyFilter: '应用', resetFilter: '重置', clearFilter: '清除',
-        columns: '列', filters: '过滤',
-        sortAscending: '升序', sortDescending: '降序', sortUnSort: '取消排序'
-    };
-
-    // 处理列定义：设置code列超链接渲染器和条件格式函数
-    colInfos.forEach(function(col) {
-        // code列：点击跳转到指标详情页
-        if (col._linkCol) {
-            delete col._linkCol;
-            col.cellRenderer = function(params) {
-                if (!params.value) return '';
-                const link = document.createElement('a');
-                link.className = 'code-link';
-                link.innerText = params.value;
-                link.href = 'javascript:void(0)';
-                link.onclick = function() {
-                    const rowData = params.data;
-                    const dateVal = rowData.date || rowData.datetime || '';
-                    const nameVal = rowData.name || '';
-                    window.open('/instock/data/indicators?code=' + params.value +
-                        '&date=' + dateVal + '&name=' + nameVal, '_blank');
-                };
-                return link;
+    function buildColumnDefs(colInfos) {
+        return colInfos.map(function(col, index) {
+            let def = {
+                field: col.value,
+                headerName: col.caption,
+                width: col.width + 20,
+                sortable: true,
+                filter: true,
+                resizable: true,
+                headerTooltip: col.caption,
+                wrapHeaderText: true,
+                autoHeaderHeight: true
             };
-        }
-        // 将cellClassRules字符串表达式转为函数
-        if (col.cellClassRules) {
-            const rules = col.cellClassRules;
-            const converted = {};
-            for (const className in rules) {
-                (function(cn, expr) {
-                    converted[cn] = function(params) {
-                        const x = params.value;
-                        if (x === null || x === undefined) return false;
-                        if (expr === 'x > 0') return x > 0;
-                        if (expr === 'x < 0') return x < 0;
-                        return false;
-                    };
-                })(className, rules[className]);
+            // 前3列固定
+            if (index < 3) {
+                def.pinned = 'left';
             }
-            col.cellClassRules = converted;
-        }
-    });
+            // code 列加超链接
+            if (col.value === 'code') {
+                def.cellRenderer = function(params) {
+                    if (!params.value) return '';
+                    let a = document.createElement('a');
+                    a.className = 'code-link';
+                    a.textContent = params.value;
+                    a.onclick = function() {
+                        let rowData = params.data;
+                        window.open('/instock/data/indicators?code=' + rowData.code + '&date=' + rowData.date + '&name=' + (rowData.name || ''), '_blank');
+                    };
+                    return a;
+                };
+            }
+            // 涨跌幅红涨绿跌
+            if (col.value === 'change_rate') {
+                def.cellStyle = function(params) {
+                    if (params.value > 0) return { color: 'red' };
+                    if (params.value < 0) return { color: 'green' };
+                    return null;
+                };
+            }
+            return def;
+        });
+    }
 
-    $(document).ready(function() {
+    function updateStatusBar() {
+        if (!gridApi) return;
+        let total = 0;
+        let filtered = 0;
+        gridApi.forEachNode(function() { total++; });
+        gridApi.forEachNodeAfterFilter(function() { filtered++; });
+        document.getElementById('totalCount').textContent = total;
+        document.getElementById('filteredCount').textContent = filtered;
+    }
+
+    function loadData() {
+        const dateVal = document.getElementById('dateid').value;
+        const oldVal = document.getElementById('dateid_old').value;
+        if (dateVal === oldVal) return;
+        document.getElementById('dateid_old').value = dateVal;
+        dateParam = dateVal;
+
+        fetch('/instock/api_data?name=' + nameParam + '&date=' + dateParam)
+            .then(function(resp) {
+                if (!resp.ok) throw new Error('HTTP ' + resp.status);
+                var ct = resp.headers.get('content-type') || '';
+                if (ct.indexOf('json') === -1) throw new Error('非JSON响应');
+                return resp.json();
+            })
+            .then(function(data) {
+                if (gridApi) {
+                    gridApi.setGridOption('rowData', data);
+                    updateStatusBar();
+                }
+            })
+            .catch(function(err) { console.error('数据加载失败:', err); });
+    }
+
+    $(document).ready(function () {
+        const columnDefs = buildColumnDefs(colInfos);
         const gridOptions = {
-            columnDefs: colInfos,
+            columnDefs: columnDefs,
             rowData: [],
             defaultColDef: {
                 sortable: true,
@@ -121,13 +141,16 @@
                 resizable: true,
                 minWidth: 50
             },
-            localeText: AG_GRID_LOCALE_ZH,
-            animateRows: false,
             rowSelection: 'single',
-            suppressCellFocus: false,
-            onSelectionChanged: updateStatusBar,
+            animateRows: true,
+            enableCellTextSelection: true,
             onFilterChanged: updateStatusBar,
-            onModelUpdated: updateStatusBar,
+            onSelectionChanged: function(event) {
+                let rows = event.api.getSelectedNodes();
+                if (rows.length > 0) {
+                    document.getElementById('currentRow').textContent = rows[0].rowIndex + 1;
+                }
+            },
             onGridReady: function(params) {
                 gridApi = params.api;
                 loadData();
@@ -145,97 +168,26 @@
             selectOtherMonths: false,
             autoclose: true,
             todayHighlight: true
-        }).on('changeDate', function(ev) {
+        }).on('changeDate', function() {
             loadData();
         });
 
-        // 重置筛选按钮
+        // 重置筛选
         document.getElementById('resetFilter').onclick = function() {
             if (gridApi) {
                 gridApi.setFilterModel(null);
+                updateStatusBar();
             }
         };
 
-        // 保存Excel按钮（使用SheetJS）
+        // 导出 CSV
         document.getElementById('saveExcel').onclick = function() {
-            if (!gridApi) return;
-            const columns = gridApi.getAllDisplayedColumns();
-            const headers = columns.map(function(c) {
-                return c.getColDef().headerName || c.getColId();
-            });
-            const fields = columns.map(function(c) {
-                return c.getColId();
-            });
-
-            // 获取过滤后的可见行数据
-            const rowData = [];
-            gridApi.forEachNodeAfterFilterAndSort(function(node) {
-                const row = {};
-                fields.forEach(function(field, idx) {
-                    row[headers[idx]] = node.data[field];
+            if (gridApi) {
+                gridApi.exportDataAsCsv({
+                    fileName: nameParam + dateParam + '.csv'
                 });
-                rowData.push(row);
-            });
-
-            const ws = XLSX.utils.json_to_sheet(rowData);
-            const wb = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(wb, ws, nameParam);
-            const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
-            saveAs(new Blob([wbout], { type: 'application/octet-stream' }),
-                   nameParam + dateParam + '.xlsx');
+            }
         };
     });
-
-    function loadData() {
-        const dateParamOld = document.getElementById("dateid_old").value;
-        dateParam = document.getElementById('dateid').value;
-        if (dateParamOld === dateParam) return;
-        document.getElementById("dateid_old").value = dateParam;
-
-        if (gridApi) {
-            gridApi.showLoadingOverlay();
-        }
-
-        $.ajax({
-            url: "/instock/api_data?name=" + nameParam + "&date=" + dateParam,
-            type: "GET",
-            dataType: "json",
-            success: function(data) {
-                allRowData = data || [];
-                if (gridApi) {
-                    gridApi.setGridOption('rowData', allRowData);
-                    gridApi.hideOverlay();
-                    if (allRowData.length === 0) {
-                        gridApi.showNoRowsOverlay();
-                    }
-                }
-                updateStatusBar();
-            },
-            error: function(xhr, status, error) {
-                console.error("加载数据失败:", error);
-                if (gridApi) {
-                    gridApi.hideOverlay();
-                    gridApi.showNoRowsOverlay();
-                }
-            }
-        });
-    }
-
-    function updateStatusBar() {
-        if (!gridApi) return;
-        const totalRows = allRowData.length;
-        let filteredRows = 0;
-        gridApi.forEachNodeAfterFilter(function() { filteredRows++; });
-
-        const selectedNodes = gridApi.getSelectedNodes();
-        let currentRow = 0;
-        if (selectedNodes.length > 0) {
-            currentRow = selectedNodes[0].rowIndex + 1;
-        }
-
-        document.getElementById('statusBar').innerHTML =
-            ' <i class="fa fa-commenting-o"></i>总记录/筛选记录：<b>' + totalRows +
-            '</b> / <b>' + filteredRows + '</b> 条 - 当前位置：第 <b>' + currentRow + '</b> 行';
-    }
 </script>
 {% end %}
