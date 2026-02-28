@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import os.path
+import os
 import sys
 import random
+import configparser
 from instock.lib.singleton_type import singleton_type
 
 # 在项目运行时，临时将项目路径添加到环境变量
@@ -19,46 +20,68 @@ __date__ = '2025/1/6 '
 # 读取代理
 class proxys(metaclass=singleton_type):
     def __init__(self):
+        self.data = []
+        self._tunnel_proxy = None
+
+        # 优先尝试从 config.ini 读取隧道代理
+        self._load_tunnel_proxy()
+
+        # 如果隧道代理未启用，回退到 proxy.txt 文件列表
+        if self._tunnel_proxy is None:
+            self._load_proxy_file()
+
+    def _load_tunnel_proxy(self):
+        """从 config.ini 读取隧道代理配置"""
+        config_file = os.path.join(cpath, 'config.ini')
+
+        # 打包后从 exe 目录读取
+        if getattr(sys, 'frozen', False):
+            config_file = os.path.join(os.path.dirname(sys.executable), 'config.ini')
+
+        if not os.path.exists(config_file):
+            return
+
+        config = configparser.ConfigParser()
+        config.read(config_file, encoding='utf-8')
+
+        if 'proxy' not in config:
+            return
+
+        enabled = config['proxy'].getboolean('enable_proxy', False)
+        if not enabled:
+            return
+
+        host = config['proxy'].get('tunnel_host', '').strip()
+        port = config['proxy'].get('tunnel_port', '').strip()
+        username = config['proxy'].get('tunnel_username', '').strip()
+        password = config['proxy'].get('tunnel_password', '').strip()
+
+        if host and port:
+            if username and password:
+                self._tunnel_proxy = f"http://{username}:{password}@{host}:{port}"
+            else:
+                self._tunnel_proxy = f"http://{host}:{port}"
+            print(f"隧道代理已配置: {host}:{port}")
+
+    def _load_proxy_file(self):
+        """从 proxy.txt 读取代理列表"""
         try:
             with open(proxy_filename, "r") as file:
                 self.data = list(set(line.strip() for line in file.readlines() if line.strip()))
         except Exception:
-           pass
+            pass
 
     def get_data(self):
         return self.data
 
     def get_proxies(self):
-        if self.data is None or len(self.data)==0:
+        # 优先使用隧道代理
+        if self._tunnel_proxy:
+            return {"http": self._tunnel_proxy, "https": self._tunnel_proxy}
+
+        # 回退到文件代理列表
+        if self.data is None or len(self.data) == 0:
             return None
 
         proxy = random.choice(self.data)
         return {"http": proxy, "https": proxy}
-
-"""
-    def get_proxies(self):
-        if self.data is None:
-            return None
-
-        while len(self.data) > 0:
-            proxy = random.choice(self.data)
-            if https_validator(proxy):
-                return {"http": proxy, "https": proxy}
-            self.data.remove(proxy)
-
-        return None
-
-
-from requests import head
-def https_validator(proxy):
-    headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64; rv:34.0) Gecko/20100101 Firefox/34.0',
-               'Accept': '*/*',
-               'Connection': 'keep-alive',
-               'Accept-Language': 'zh-CN,zh;q=0.8'}
-    proxies = {"http": f"{proxy}", "https": f"{proxy}"}
-    try:
-        r = head("https://data.eastmoney.com", headers=headers, proxies=proxies, timeout=3, verify=False)
-        return True if r.status_code == 200 else False
-    except Exception as e:
-        return False
-"""
