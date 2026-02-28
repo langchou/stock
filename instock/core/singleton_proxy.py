@@ -23,12 +23,21 @@ class proxys(metaclass=singleton_type):
         self.data = []
         self._tunnel_proxy = None
 
-        # 优先尝试从 config.ini 读取隧道代理
-        self._load_tunnel_proxy()
+        # 优先级: 环境变量 PROXY_URL > config.ini > proxy.txt
+        self._load_from_env()
 
-        # 如果隧道代理未启用，回退到 proxy.txt 文件列表
+        if self._tunnel_proxy is None:
+            self._load_tunnel_proxy()
+
         if self._tunnel_proxy is None:
             self._load_proxy_file()
+
+    def _load_from_env(self):
+        """从环境变量 PROXY_URL 读取代理（Docker 部署用）"""
+        proxy_url = os.environ.get('PROXY_URL', '').strip()
+        if proxy_url:
+            self._tunnel_proxy = proxy_url
+            print(f"代理已配置(环境变量): {proxy_url.split('@')[-1] if '@' in proxy_url else proxy_url}")
 
     def _load_tunnel_proxy(self):
         """从 config.ini 读取隧道代理配置"""
